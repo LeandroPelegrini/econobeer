@@ -1,43 +1,63 @@
-/* self.addEventListener('fetch', (event) => {
-  event.respondWith(async function() {
-    const cache = await caches.open('mysite-dynamic');
-    const cachedResponse = await cache.match(event.request);
-    const networkResponsePromise = fetch(event.request);
-
-    event.waitUntil(async function() {
-      const networkResponse = await networkResponsePromise;
-      await cache.put(event.request, networkResponse.clone());
-    }());
-
-    // Returned the cached response if we have one, otherwise return the network response.
-    return cachedResponse || networkResponsePromise;
-  }());
-});  */
-
-// Choose a cache name
-const cacheName = 'cache-v1';
-// List the files to precache
-const precacheResources = ['/', '/index.html', '/css/index.css'];
-
-// When the service worker is installing, open the cache and add the precache resources to it
-self.addEventListener('install', (event) => {
-  console.log('Service worker install event!');
-  event.waitUntil(caches.open(cacheName).then((cache) => cache.addAll(precacheResources)));
+import { build, files, timestamp } from '$service-worker';
+const worker = self;
+const FILES = `cache${timestamp}`;
+const to_cache = build.concat(files);
+const staticAssets = new Set(to_cache);
+// listen for the install events
+worker.addEventListener('install', (event) => {
+    event.waitUntil(
+        caches
+            .open(FILES)
+            .then((cache) => cache.addAll(to_cache))
+            .then(() => {
+                worker.skipWaiting();
+            })
+    );
 });
-
-self.addEventListener('activate', (event) => {
-  console.log('Service worker activate event!');
+// listen for the activate events
+worker.addEventListener('activate', (event) => {
+    event.waitUntil(
+        caches.keys().then(async (keys) => {
+            // delete old caches
+            for (const key of keys) {
+                if (key !== FILES) await caches.delete(key);
+            }
+            worker.clients.claim();
+        })
+    );
 });
-
-// When there's an incoming fetch request, try and respond with a precached resource, otherwise fall back to the network
-self.addEventListener('fetch', (event) => {
-  console.log('Fetch intercepted for:', event.request.url);
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request);
-    }),
-  );
+// attempt to process HTTP requests and rely on the cache if offline
+async function fetchAndCache(request) {
+    const cache = await caches.open(`offline${timestamp}`);
+    try {
+        const response = await fetch(request);
+        cache.put(request, response.clone());
+        return response;
+    } catch (err) {
+        const response = await cache.match(request);
+        if (response) return response;
+        throw err;
+    }
+}
+// listen for the fetch events
+worker.addEventListener('fetch', (event) => {
+    if (event.request.method !== 'GET' || event.request.headers.has('range')) return;
+    const url = new URL(event.request.url);
+    // only cache files that are local to your application
+    const isHttp = url.protocol.startsWith('http');
+    const isDevServerRequest =
+        url.hostname === self.location.hostname && url.port !== self.location.port;
+    const isStaticAsset = url.host === self.location.host && staticAssets.has(url.pathname);
+    const skipBecauseUncached = event.request.cache === 'only-if-cached' && !isStaticAsset;
+    if (isHttp && !isDevServerRequest && !skipBecauseUncached) {
+        event.respondWith(
+            (async () => {
+                // always serve static files and bundler-generated assets from cache.
+                // if your application has other URLs with data that will never change,
+                // set this variable to true for them and they will only be fetched once.
+                const cachedAsset = isStaticAsset && (await caches.match(event.request));
+                return cachedAsset || fetchAndCache(event.request);
+            })()
+        );
+    }
 });
