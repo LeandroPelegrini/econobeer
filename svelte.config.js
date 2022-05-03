@@ -6,9 +6,8 @@ const config = {
 		adapter: adapter()
 	},
 	files: {
-		serviceWorker: '/sw.js'
+		serviceWorker: 'src/service-worker'
 	  },
-	outDir: '.svelte-kit',
 };
 
 export default config;
