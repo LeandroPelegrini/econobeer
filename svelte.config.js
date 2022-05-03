@@ -6,7 +6,7 @@ const config = {
 		adapter: adapter()
 	},
 	files: {
-		serviceWorker: 'src/sw.js'
+		serviceWorker: '/sw.js'
 	  },
 	outDir: '.svelte-kit',
 };
