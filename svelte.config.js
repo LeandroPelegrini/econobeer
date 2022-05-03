@@ -4,7 +4,11 @@ import adapter from '@sveltejs/adapter-auto';
 const config = {
 	kit: {
 		adapter: adapter()
-	}
+	},
+	files: {
+		serviceWorker: 'src/sw.js'
+	  },
+	outDir: '.svelte-kit',
 };
 
 export default config;
