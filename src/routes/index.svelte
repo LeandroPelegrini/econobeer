@@ -1,4 +1,7 @@
 <script>
+	import { Confetti } from "svelte-confetti"
+	import ToggleConfetti from '../ToggleConfetti.svelte'
+
 	let preco;
 	let ml;
 	let showModal = false;
@@ -162,9 +165,14 @@ button{
 			<input id="ml" type="number"  placeholder="350" class="masked" pattern="2.90" bind:value={ml}/>
 		</label>
 	</div>
-	<button class="calc" on:click={calc}>
-		Economize!	
-	</button>
+	<ToggleConfetti style="with:100%">
+		<button  slot="label" style="width: 100%" class="calc" on:click={calc}>
+			Economize!	</button>
+			<div style="position: fixed; top: -50px; left: 0; height: 100vh; width: 100vw; display: flex; justify-content: center; overflow: hidden;">
+				<Confetti x={[-5, 5]} y={[0, 0.1]} delay={[0, 2000]} duration=5000 amount=1000 fallDistance="100vh" />
+			</div>
+
+	</ToggleConfetti>
 	</div>
   <div class="result">
     <div class="esq">
