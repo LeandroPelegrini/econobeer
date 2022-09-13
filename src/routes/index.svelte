@@ -58,7 +58,7 @@
 		box-shadow: 0 0 15px rgba(3,3,3, 0.5);
 		background: #eedd00;
 		width: 400px;
-		height: 800px;
+		height: 100vh;
 	}
 	.result {
 		display: flex;
